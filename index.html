@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#161b22">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>VS CODE ULTRA PRO MAX</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+<!-- ===== SETTINGS PANEL ===== -->
+<div id="settingsPanel" class="settings-panel hidden">
+  <div class="settings-header">
+    <span>⚙ Settings</span>
+    <button onclick="document.getElementById('settingsPanel').classList.add('hidden')" style="background:#c0392b;padding:4px 10px;">✕</button>
+  </div>
+  <div class="settings-tabs">
+    <button class="settings-tab-btn active" data-tab="keys"    onclick="switchSettingsTab('keys')">🔑 API Keys</button>
+    <button class="settings-tab-btn"        data-tab="models"  onclick="switchSettingsTab('models')">🤖 Models</button>
+    <button class="settings-tab-btn"        data-tab="custom"  onclick="switchSettingsTab('custom')">➕ Custom APIs</button>
+    <button class="settings-tab-btn"        data-tab="cloud"   onclick="switchSettingsTab('cloud')">☁ Cloud</button>
+  </div>
+
+  <!-- KEYS -->
+  <div class="settings-tab-content settings-body" data-tab="keys">
+    <p class="settings-tip">🔒 Saved locally on your device only.</p>
+    <div class="settings-group"><label>Gemini API Key</label><input id="settingsGemini" type="password" placeholder="AIza..."><a href="https://aistudio.google.com/app/apikey" target="_blank" class="key-link">Get free →</a></div>
+    <div class="settings-group"><label>Groq API Key</label><input id="settingsGroq" type="password" placeholder="gsk_..."><a href="https://console.groq.com/keys" target="_blank" class="key-link">Get free →</a></div>
+    <div class="settings-group"><label>DeepSeek API Key</label><input id="settingsDeepseek" type="password" placeholder="sk-..."><a href="https://platform.deepseek.com/api_keys" target="_blank" class="key-link">Get →</a></div>
+    <div class="settings-group"><label>OpenRouter API Key</label><input id="settingsOpenrouter" type="password" placeholder="sk-or-..."><a href="https://openrouter.ai/keys" target="_blank" class="key-link">Get free →</a></div>
+    <div class="settings-group"><label>HuggingFace API Key</label><input id="settingsHuggingface" type="password" placeholder="hf_..."><a href="https://huggingface.co/settings/tokens" target="_blank" class="key-link">Get free →</a></div>
+    <div class="settings-group"><label>Unsplash Key (images)</label><input id="settingsUnsplash" type="password" placeholder="Unsplash access key"><a href="https://unsplash.com/developers" target="_blank" class="key-link">Get free →</a></div>
+    <button onclick="saveSettings()" style="width:100%;padding:11px;background:#00a884;border-radius:8px;font-size:14px;margin-top:4px;">💾 Save All Keys</button>
+  </div>
+
+  <!-- MODELS -->
+  <div class="settings-tab-content settings-body hidden" data-tab="models">
+    <p class="settings-tip">🤖 Add extra models to any provider — useful when old models get removed.</p>
+    <div class="settings-group">
+      <label>Provider</label>
+      <select id="cmProviderSelect" onchange="renderCustomModelsList()" style="padding:8px;border-radius:7px;background:#0d1117;color:white;border:1px solid #333;font-size:13px;">
+        <option value="gemini">Gemini</option>
+        <option value="groq">Groq</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="huggingface">HuggingFace</option>
+      </select>
+    </div>
+    <div class="settings-group">
+      <label>New Model Name</label>
+      <div style="display:flex;gap:8px;">
+        <input id="cmModelName" type="text" placeholder="e.g. gemini-2.0-pro, llama-4-scout" style="flex:1;">
+        <button onclick="addCustomModel(document.getElementById('cmProviderSelect').value,document.getElementById('cmModelName').value);document.getElementById('cmModelName').value='';renderCustomModelsList();updateModels();showToast('Model added ✓','success');" style="padding:8px 12px;background:#1f6feb;">➕ Add</button>
+      </div>
+    </div>
+    <div id="customModelsList" class="custom-providers-list"></div>
+  </div>
+
+  <!-- CUSTOM APIS -->
+  <div class="settings-tab-content settings-body hidden" data-tab="custom">
+    <p class="settings-tip">➕ Add any OpenAI-compatible API endpoint.</p>
+    <div id="customProvidersList" class="custom-providers-list"></div>
+    <div class="cp-divider">Add New Provider</div>
+    <div class="settings-group"><label>Name *</label><input id="cpName" type="text" placeholder="e.g. My Ollama, Perplexity"></div>
+    <div class="settings-group"><label>Endpoint URL *</label><input id="cpEndpoint" type="text" placeholder="https://api.example.com/v1/chat/completions"></div>
+    <div class="settings-group"><label>API Key</label><input id="cpApiKey" type="password" placeholder="sk-..."></div>
+    <div class="settings-group"><label>Default Model</label><input id="cpModel" type="text" placeholder="e.g. llama3, mistral-7b"></div>
+    <div class="settings-group"><label>Custom Headers (JSON)</label><input id="cpCustomHeaders" type="text" placeholder='{"X-Header":"value"}'></div>
+    <div class="cp-examples">
+      <div class="cp-example-title">Quick fill:</div>
+      <button class="cp-example-btn" onclick="fillExample('ollama')">🦙 Ollama</button>
+      <button class="cp-example-btn" onclick="fillExample('perplexity')">🔍 Perplexity</button>
+      <button class="cp-example-btn" onclick="fillExample('together')">🤝 Together AI</button>
+      <button class="cp-example-btn" onclick="fillExample('mistral')">🌬 Mistral</button>
+      <button class="cp-example-btn" onclick="fillExample('lmstudio')">🖥 LM Studio</button>
+      <button class="cp-example-btn" onclick="fillExample('cohere')">🌊 Cohere</button>
+    </div>
+    <button onclick="addCustomProvider()" style="width:100%;padding:11px;background:#1f6feb;border-radius:8px;font-size:14px;margin-top:6px;">➕ Add Provider</button>
+  </div>
+
+  <!-- CLOUD / FIREBASE -->
+  <div class="settings-tab-content settings-body hidden" data-tab="cloud">
+    <p class="settings-tip">☁ Connect Firebase to save AI conversations to the cloud and resume them later on any device.</p>
+    <div class="settings-group"><label>Firebase API Key</label><input id="fbApiKey" type="password" placeholder="AIza..."><a href="https://console.firebase.google.com" target="_blank" class="key-link">Get →</a></div>
+    <div class="settings-group"><label>Firebase Project ID</label><input id="fbProjectId" type="text" placeholder="my-project-12345"></div>
+    <div class="settings-group"><label>Firebase App ID</label><input id="fbAppId" type="text" placeholder="1:123:web:abc..."></div>
+    <div class="settings-tip" style="margin-top:4px;">
+      <b>How to get Firebase keys:</b><br>
+      1. Go to console.firebase.google.com<br>
+      2. Create project → Add web app<br>
+      3. Copy the config values above<br>
+      4. Enable Firestore Database in the console
+    </div>
+    <button onclick="saveSettings()" style="width:100%;padding:11px;background:#00a884;border-radius:8px;font-size:14px;margin-top:8px;">💾 Save & Connect Firebase</button>
+  </div>
+</div>
+
+<!-- IMAGE PANEL -->
+<div id="imagePanel" class="image-panel hidden">
+  <div class="img-panel-header"><span>🖼 Image Search</span><button id="closeImgPanel">✕</button></div>
+  <div class="img-search-bar"><input id="imgSearchInput" type="text" placeholder="Search images..."><button id="imgSearchGo">Search</button></div>
+  <div class="img-tip">💡 Tap any image to insert at cursor</div>
+  <div id="imgGrid" class="img-grid"></div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="top-left">
+    <button id="sidebarToggleBtn" class="icon-btn mobile-only">☰</button>
+    <button id="collapseSidebarBtn" class="icon-btn desktop-only" title="Collapse Sidebar">◀</button>
+    <div class="logo">⚡ <span class="logo-text">VS CODE GOD MODE</span></div>
+  </div>
+  <div class="top-center">
+    <button id="runBtn">▶ Run</button>
+    <button id="newFileBtn">＋ File</button>
+    <button id="newFolderBtn">📁 Folder</button>
+    <button id="openFolderBtn">📂 Open</button>
+    <button id="splitBtn" class="desktop-only">⬒ Split</button>
+    <button id="togglePreviewBtn" class="desktop-only">🌐</button>
+    <button id="saveBtn">💾</button>
+    <button id="downloadAllBtn">⬇ ZIP</button>
+    <button id="imageSearchBtn">🖼</button>
+    <button id="formatBtn" class="desktop-only">{ }</button>
+    <button id="themeBtn">🎨</button>
+    <button id="fontMinusBtn" class="desktop-only">A-</button>
+    <button id="fontPlusBtn" class="desktop-only">A+</button>
+    <button id="consoleToggleBtn">⬛ <span id="consoleBadge" class="badge" style="display:none">0</span></button>
+    <button id="settingsBtn">⚙</button>
+    <button id="toggleAiBtn">🤖 AI</button>
+  </div>
+  <input type="file" id="folderInput" webkitdirectory multiple hidden>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span>Explorer</span>
+      <button class="mobile-only" onclick="document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('active');" style="background:transparent;color:#aaa;padding:4px 8px;">✕</button>
+    </div>
+    <div id="recentProjects"></div>
+    <div id="fileList"></div>
+  </div>
+  <div class="resizer desktop-only" id="sidebarResizer"></div>
+
+  <div class="editor-area">
+    <div id="tabs"></div>
+    <div class="editors-row">
+      <div id="editor1"></div>
+      <div class="split-resizer hidden" id="splitResizer"></div>
+      <div class="editor2-wrap hidden" id="editor2Wrap">
+        <div class="split-header" id="splitHeader"></div>
+        <div id="editor2"></div>
+      </div>
+    </div>
+    <div class="console-panel hidden" id="consolePanel">
+      <div class="console-header">
+        <span>🖥 Console</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span id="consoleCount" style="font-size:11px;color:#666;">0 messages</span>
+          <button id="clearConsoleBtn">Clear</button>
+        </div>
+      </div>
+      <div id="consoleOutput"></div>
+    </div>
+  </div>
+
+  <div class="resizer desktop-only" id="previewResizer"></div>
+  <div class="preview" id="preview">
+    <div class="preview-header">
+      <span>🌐 Live Preview</span>
+      <button id="collapsePreviewBtn" class="icon-btn">◀</button>
+    </div>
+    <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+  </div>
+
+  <div class="resizer desktop-only hidden" id="aiResizer"></div>
+  <div id="aiPanel" class="collapsed">
+    <div class="ai-header">
+      <div class="ai-title">🤖 AI Assistant</div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <button id="saveConversationBtn" style="padding:3px 7px;font-size:11px;background:#1a3a5c;" title="Save chat to cloud">☁ Save</button>
+        <button id="clearChatBtn"  style="padding:3px 7px;font-size:11px;background:#333;">🗑</button>
+        <button id="collapseAiBtn" style="padding:3px 7px;font-size:11px;">◀</button>
+        <button id="closeAiBtn"    style="padding:3px 7px;font-size:11px;background:#c0392b;">✖</button>
+      </div>
+    </div>
+    <div class="ai-controls">
+      <select id="providerSelect">
+        <option value="gemini">Gemini</option>
+        <option value="groq">Groq</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="huggingface">HuggingFace</option>
+      </select>
+      <select id="modelSelect"></select>
+    </div>
+    <div class="prompt-templates">
+      <button class="prompt-btn" data-prompt="Build a complete modern website with navbar, hero, about, services, contact sections and ALL linked pages">🏗 Full Site</button>
+      <button class="prompt-btn" data-prompt="Fix all bugs in my current file">🐛 Fix bugs</button>
+      <button class="prompt-btn" data-prompt="Make this page fully responsive for all screen sizes">📱 Responsive</button>
+      <button class="prompt-btn" data-prompt="Add working login and signup pages with localStorage auth">🔐 Login Page</button>
+      <button class="prompt-btn" data-prompt="Add a professional dark mode toggle that works across all pages">🌙 Dark mode</button>
+      <button class="prompt-btn" data-prompt="Improve the UI design to look modern and beautiful with animations">✨ Improve UI</button>
+    </div>
+    <div id="aiChat"></div>
+    <div class="ai-input-area">
+      <textarea id="aiInput" placeholder="Tell AI what to build... (Ctrl+Enter to send)"></textarea>
+      <button id="aiSend">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<div class="mobile-nav mobile-only">
+  <button onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('active');">📁<span>Files</span></button>
+  <button onclick="document.getElementById('preview').classList.toggle('mobile-show');">🌐<span>Preview</span></button>
+  <button id="mobileFontMinus">A-<span>Smaller</span></button>
+  <button id="mobileFontPlus">A+<span>Bigger</span></button>
+  <button id="mobileTheme">🎨<span>Theme</span></button>
+  <button onclick="document.getElementById('consoleToggleBtn').click();">⬛<span>Console</span></button>
+  <button onclick="document.getElementById('toggleAiBtn').click();">🤖<span>AI</span></button>
+  <button onclick="openSettings();">⚙<span>Settings</span></button>
+</div>
+
+<script src="ai.js"></script>
+<script src="app.js"></script>
+<script>
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+document.getElementById("settingsBtn").onclick=()=>openSettings();
+
+function fillExample(type){
+  const ex={ollama:{name:"Ollama (Local)",endpoint:"http://localhost:11434/v1/chat/completions",key:"",model:"llama3"},perplexity:{name:"Perplexity",endpoint:"https://api.perplexity.ai/chat/completions",key:"pplx-...",model:"llama-3.1-sonar-small-128k-online"},together:{name:"Together AI",endpoint:"https://api.together.xyz/v1/chat/completions",key:"",model:"meta-llama/Llama-3-8b-chat-hf"},mistral:{name:"Mistral",endpoint:"https://api.mistral.ai/v1/chat/completions",key:"",model:"mistral-small-latest"},lmstudio:{name:"LM Studio",endpoint:"http://localhost:1234/v1/chat/completions",key:"",model:"local-model"},cohere:{name:"Cohere",endpoint:"https://api.cohere.com/v1/chat",key:"",model:"command-r-plus"}};
+  const e=ex[type];if(!e)return;
+  document.getElementById("cpName").value=e.name;document.getElementById("cpEndpoint").value=e.endpoint;document.getElementById("cpApiKey").value=e.key;document.getElementById("cpModel").value=e.model;
+  showToast("Filled "+e.name+" — add your API key","info");
+}
+
+window.addEventListener("load",()=>{
+  loadCustomProvidersIntoDropdown();
+  getCustomProviders().forEach(p=>{if(window.models)window.models[p.id]=p.defaultModel?[p.defaultModel]:["default"];});
+});
+</script>
+</body>
+</html>
